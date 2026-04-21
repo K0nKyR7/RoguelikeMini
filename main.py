@@ -24,13 +24,14 @@ ORANGE = (255, 165, 0)
 class Button:
     
     def __init__(self, x, y, width, height, text, text_color=WHITE, 
-                 normal_color=DARK_GRAY, hover_color=GRAY):
+                 normal_color=DARK_GRAY, hover_color=GRAY, font=None):
         self.rect = pg.Rect(x, y, width, height)
         self.text = text
         self.text_color = text_color
         self.normal_color = normal_color
         self.hover_color = hover_color
         self.is_hovered = False
+        self.font = font
     
     def draw(self, screen, surface):
         color = self.hover_color if self.is_hovered else self.normal_color
@@ -59,10 +60,10 @@ class Game:
         
         self.screen = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pg.display.set_caption(CAPTION)
-        
-        self.title_font = pg.font.Font(None, 72)
-        self.menu_font = pg.font.Font(None, 48)
-        self.small_font = pg.font.Font(None, 24)
+        self.fonts = self.load_fonts()
+        self.title_font = self.get_font('huge')
+        self.menu_font = self.get_font('large')      
+        self.small_font = self.get_font('small')
         
         self.state = "menu" 
         self.running = True
@@ -79,6 +80,57 @@ class Game:
         
         self.create_menu_buttons()
         
+    def load_fonts(self):
+        fonts = {}
+        
+        fonts_dir = os.path.join('assets', 'fonts')
+        
+        # Создаём папку, если её нет
+        if not os.path.exists(fonts_dir):
+            os.makedirs(fonts_dir)
+            print(f"Создана папка: {fonts_dir}")
+            print("ПОЛОЖИ СЮДА ФАЙЛЫ ШРИФТОВ!")
+        font_files = []
+        if os.path.exists(fonts_dir):
+            for file in os.listdir(fonts_dir):
+                if file.endswith(('.ttf', '.otf')):
+                    font_files.append(file)
+        
+        for font_file in font_files:
+            font_path = os.path.join(fonts_dir, font_file)
+            font_name = os.path.splitext(font_file)[0]
+        
+            try:
+                # Загружаем разные размеры
+                fonts[font_name] = {
+                    'small': pg.font.Font(font_path, 16),
+                    'medium': pg.font.Font(font_path, 24),
+                    'large': pg.font.Font(font_path, 36),
+                    'huge': pg.font.Font(font_path, 48),
+                }
+                print(f"Font loaded: {font_file}")
+            except Exception as e:
+                print(f"Error loading font {font_file}: {e}")
+        if not fonts:
+            print("No fonts found in assets/fonts. Using default pygame font.")
+            fonts['default'] = {
+                'small': pg.font.Font(None, 16),
+                'medium': pg.font.Font(None, 24),
+                'large': pg.font.Font(None, 36),
+                'huge': pg.font.Font(None, 48),
+            }
+        
+        return fonts
+    
+    def get_font(self, size='medium', font_name=None):
+        if font_name is None:
+            font_name = list(self.fonts.keys())[0]
+        
+        if font_name not in self.fonts:
+            font_name = 'default'
+        
+        return self.fonts[font_name].get(size, self.fonts[font_name]['medium'])
+    
     def load_settings(self):
         settings_path = "config/settings.json"
         default_settings = {"player_speed": 5}
