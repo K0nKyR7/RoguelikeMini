@@ -34,12 +34,16 @@ class Button:
         self.is_hovered = False
         self.font = font
 
-    def draw(self, screen, surface):
+    def draw(self, screen, font):
         color = self.hover_color if self.is_hovered else self.normal_color
         pg.draw.rect(screen, color, self.rect)
         pg.draw.rect(screen, WHITE, self.rect, 2)
 
-        text_surface = surface.render(self.text, True, self.text_color)
+        if font:
+            text_surface = font.render(self.text, True, self.text_color)
+        else:
+            default_font = pg.font.Font(None, 24)
+            text_surface = default_font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
 
@@ -78,9 +82,9 @@ class Game:
         self.moving_to_target = False
 
         self.create_speed_slider()
+        self.create_volume_slider()
         self.create_menu_buttons()
 
-        # Запускаем музыку главного меню при старте
         self.load_and_play_music()
 
     def load_fonts(self):
@@ -132,7 +136,7 @@ class Game:
 
     def load_settings(self):
         settings_path = "config/settings.json"
-        default_settings = {"player_speed": 2}
+        default_settings = {"player_speed": 2, "volume": 0.5}
 
         try:
             os.makedirs("config", exist_ok=True)
@@ -164,14 +168,37 @@ class Game:
             "dragging": False
         }
         self.update_slider_handle()
+        
+    def create_volume_slider(self):
+        self.volume_slider = {
+            "rect": pg.Rect(WINDOW_WIDTH // 2 - 150, 350, 300, 10),
+            "handle_rect": pg.Rect(0, 0, 20, 30),
+            "min_value": 0,
+            "max_value": 1,
+            "value": self.settings.get("volume", 0.5),
+            "dragging": False
+        }
+        self.update_volume_slider_handle()
 
     def update_slider_handle(self):
         slider = self.speed_slider
         value_range = slider["max_value"] - slider["min_value"]
-        pos_ratio = (slider["value"] - slider["min_value"]) / value_range
-        handle_x = slider["rect"].x + (slider["rect"].width * pos_ratio) - 10
+        pos_ratio = 0
+        if value_range != 0:
+            pos_ratio = (slider["value"] - slider["min_value"]) / value_range
+        handle_x = int(slider["rect"].x + (slider["rect"].width * pos_ratio) - (slider["handle_rect"].width // 2))
         slider["handle_rect"].x = handle_x
-        slider["handle_rect"].centery = slider["rect"].centery
+        slider["handle_rect"].centery = int(slider["rect"].centery)
+        
+    def update_volume_slider_handle(self):
+        slider = self.volume_slider
+        value_range = slider["max_value"] - slider["min_value"]
+        pos_ratio = 0
+        if value_range != 0:
+            pos_ratio = (slider["value"] - slider["min_value"]) / value_range
+        handle_x = int(slider["rect"].x + (slider["rect"].width * pos_ratio) - (slider["handle_rect"].width // 2))
+        slider["handle_rect"].x = handle_x
+        slider["handle_rect"].centery = int(slider["rect"].centery)
 
     def create_menu_buttons(self):
         button_width = 300
@@ -206,7 +233,6 @@ class Game:
 
     # ------------------- МУЗЫКА -------------------
     def load_and_play_music(self):
-        """Загружает и запускает фоновую музыку главного меню."""
         if pg.mixer.music.get_busy():
             return
 
@@ -216,14 +242,13 @@ class Game:
                 pg.mixer.music.load(music_path)
                 pg.mixer.music.set_volume(0.5)
                 pg.mixer.music.play(-1)
-                print("Музыка меню запущена")
+                print("Music started")
             else:
-                print(f"Файл музыки меню не найден: {music_path}")
+                print(f"Music not found: {music_path}")
         except pg.error as e:
-            print(f"Ошибка загрузки музыки меню: {e}")
+            print(f"Error loading music: {e}")
 
     def load_and_play_game_music(self):
-        """Загружает и запускает музыку для игрового процесса."""
         if pg.mixer.music.get_busy():
             return
 
@@ -233,17 +258,16 @@ class Game:
                 pg.mixer.music.load(music_path)
                 pg.mixer.music.set_volume(0.4)
                 pg.mixer.music.play(-1)
-                print("Игровая музыка запущена")
+                print("Game music started")
             else:
-                print(f"Файл игровой музыки не найден: {music_path}")
+                print(f"Game music file not found: {music_path}")
         except pg.error as e:
-            print(f"Ошибка загрузки игровой музыки: {e}")
+            print(f"Error loading game music: {e}")
 
     def stop_music(self):
-        """Останавливает музыку, если она играет."""
         if pg.mixer.music.get_busy():
             pg.mixer.music.stop()
-            print("Музыка остановлена")
+            print("Music stopped")
     # ------------------------------------------------
 
     def handle_menu_events(self, event):
@@ -271,6 +295,8 @@ class Game:
             self.back_button.check_hover(event.pos)
             if self.speed_slider["dragging"]:
                 self.update_slider_value(event.pos[0])
+            if self.volume_slider["dragging"]:
+                self.update_volume_slider_value(event.pos[0])
 
         elif event.type == pg.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -284,10 +310,16 @@ class Game:
                 elif self.speed_slider["rect"].collidepoint(mouse_pos):
                     self.update_slider_value(mouse_pos[0])
                     self.speed_slider["dragging"] = True
+                elif self.volume_slider["handle_rect"].collidepoint(mouse_pos):
+                    self.volume_slider["dragging"] = True
+                elif self.volume_slider["rect"].collidepoint(mouse_pos):
+                    self.update_volume_slider_value(mouse_pos[0])
+                    self.volume_slider["dragging"] = True
 
         elif event.type == pg.MOUSEBUTTONUP:
             if event.button == 1:
                 self.speed_slider["dragging"] = False
+                self.volume_slider["dragging"] = False
 
     def update_slider_value(self, mouse_x):
         slider = self.speed_slider
@@ -299,6 +331,17 @@ class Game:
         self.player_speed = slider["value"]
         self.settings["player_speed"] = slider["value"]
         self.update_slider_handle()
+        
+    def update_volume_slider_value(self, mouse_x):
+        slider = self.volume_slider
+        mouse_x = max(slider["rect"].left, min(mouse_x, slider["rect"].right))
+        pos_ratio = (mouse_x - slider["rect"].left) / slider["rect"].width
+        value_range = slider["max_value"] - slider["min_value"]
+        new_value = slider["min_value"] + (value_range * pos_ratio)
+        slider["value"] = round(new_value, 2)
+        pg.mixer.music.set_volume(slider["value"])
+        self.settings["volume"] = slider["value"]
+        self.update_volume_slider_handle()
 
     def handle_game_events(self, event):
         if event.type == pg.KEYDOWN:
@@ -393,6 +436,10 @@ class Game:
         speed_label = self.menu_font.render("Скорость игрока:", True, WHITE)
         label_rect = speed_label.get_rect(center=(WINDOW_WIDTH // 2, 200))
         self.screen.blit(speed_label, label_rect)
+        
+        volume_label = self.menu_font.render("Громкость музыки:", True, WHITE)
+        volume_label_rect = volume_label.get_rect(center=(WINDOW_WIDTH // 2, 300))
+        self.screen.blit(volume_label, volume_label_rect)
 
         speed_value = self.menu_font.render(
             str(self.speed_slider["value"]),
@@ -403,6 +450,16 @@ class Game:
             center=(WINDOW_WIDTH // 2 + 200, 200)
         )
         self.screen.blit(speed_value, value_rect)
+        
+        volume_value = self.menu_font.render(
+            str(self.volume_slider["value"]),
+            True,
+            YELLOW
+        )
+        volume_value_rect = volume_value.get_rect(
+            center=(WINDOW_WIDTH // 2 + 200, 300)
+        )
+        self.screen.blit(volume_value, volume_value_rect)
 
         slider = self.speed_slider
 
@@ -434,10 +491,22 @@ class Game:
 
         self.screen.blit(min_text, min_rect)
         self.screen.blit(max_text, max_rect)
-
-        hint = self.small_font.render("Перетаскивайте для изменения", True, LIGHT_GRAY)
-        hint_rect = hint.get_rect(center=(WINDOW_WIDTH // 2, 320))
-        self.screen.blit(hint, hint_rect)
+        
+        pg.draw.rect(self.screen, GRAY, self.volume_slider["rect"])
+        pg.draw.rect(self.screen, WHITE, self.volume_slider["rect"], 2)
+        
+        volume_filled_width = (self.volume_slider["value"] - self.volume_slider["min_value"]) / (self.volume_slider["max_value"] - self.volume_slider["min_value"])
+        volume_filled_rect = pg.Rect(
+            self.volume_slider["rect"].x,
+            self.volume_slider["rect"].y,
+            self.volume_slider["rect"].width * volume_filled_width,
+            self.volume_slider["rect"].height
+        )
+        pg.draw.rect(self.screen, BLUE, volume_filled_rect)
+        
+        volume_handle_color = YELLOW if self.volume_slider["dragging"] else WHITE
+        pg.draw.rect(self.screen, volume_handle_color, self.volume_slider["handle_rect"])
+        pg.draw.rect(self.screen, DARK_GRAY, self.volume_slider["handle_rect"], 2)
 
         self.back_button.draw(self.screen, self.menu_font)
 
@@ -476,7 +545,6 @@ class Game:
         elif self.state == "options":
             self.draw_options()
         elif self.state == "game":
-            self.update_game()
             self.draw_game()
         pg.display.flip()
 
