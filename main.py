@@ -4,6 +4,7 @@ import json
 import os
 import logging
 
+# Настройка логирования
 handler1 = logging.FileHandler("logs/game_errors.log", encoding='utf-8')
 handler2 = logging.FileHandler("logs/game_info.log", encoding='utf-8')
 
@@ -100,6 +101,20 @@ class Game:
         self.create_speed_slider()
         self.create_volume_slider()
         self.create_menu_buttons()
+
+        # --- ДОБАВЛЕНО: загрузка фонового изображения для меню ---
+        self.menu_bg = None
+        bg_path = os.path.join('assets', 'images', 'menu_background.jpg')
+        try:
+            if os.path.exists(bg_path):
+                original_bg = pg.image.load(bg_path).convert_alpha()
+                self.menu_bg = pg.transform.scale(original_bg, (WINDOW_WIDTH, WINDOW_HEIGHT))
+                logger2.info(f"Background image loaded: {bg_path}")
+            else:
+                logger1.error(f"Background image not found: {bg_path}")
+        except Exception as e:
+            logger1.error(f"Error loading background image: {e}")
+        # ---------------------------------------------------------
 
         self.load_and_play_music()
 
@@ -256,7 +271,7 @@ class Game:
         try:
             if os.path.exists(music_path):
                 pg.mixer.music.load(music_path)
-                pg.mixer.music.set_volume(0.5)
+                pg.mixer.music.set_volume(self.volume_slider["value"])
                 pg.mixer.music.play(-1)
                 logger2.info("Music started")
             else:
@@ -272,7 +287,7 @@ class Game:
         try:
             if os.path.exists(music_path):
                 pg.mixer.music.load(music_path)
-                pg.mixer.music.set_volume(0.4)
+                pg.mixer.music.set_volume(self.volume_slider["value"])
                 pg.mixer.music.play(-1)
                 logger2.info("Game music started")
             else:
@@ -425,7 +440,12 @@ class Game:
         self.player_y = max(10, min(self.player_y, WINDOW_HEIGHT - 10))
 
     def draw_menu(self):
-        self.screen.fill(BLACK)
+        # --- ДОБАВЛЕНО: отрисовка фонового изображения ---
+        if self.menu_bg:
+            self.screen.blit(self.menu_bg, (0, 0))
+        else:
+            self.screen.fill(BLACK)
+        # ------------------------------------------------
 
         title1 = self.title_font.render("PythonRL", True, GREEN)
         title2 = self.title_font.render("Echoes of the Forgotten Throne", True, PURPLE)
