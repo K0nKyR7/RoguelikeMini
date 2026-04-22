@@ -2,6 +2,24 @@ import sys
 import pygame as pg
 import json
 import os
+import logging
+
+handler1 = logging.FileHandler("logs/game_errors.log", encoding='utf-8')
+handler2 = logging.FileHandler("logs/game_info.log", encoding='utf-8')
+
+formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+handler1.setFormatter(formatter)
+handler2.setFormatter(formatter)
+logger1 = logging.getLogger('game_errors')
+logger2 = logging.getLogger('game_info')
+
+logger1.addHandler(handler1)
+logger2.addHandler(handler2)
+logger1.setLevel(logging.ERROR)
+logger2.setLevel(logging.INFO)
 
 CAPTION = "Echoes of the Forgotten Throne"
 
@@ -20,7 +38,6 @@ BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 PURPLE = (128, 0, 128)
 ORANGE = (255, 165, 0)
-
 
 class Button:
 
@@ -58,7 +75,6 @@ class Button:
                 and self.rect.collidepoint(event.pos)
         )
 
-
 class Game:
 
     def __init__(self):
@@ -93,8 +109,7 @@ class Game:
 
         if not os.path.exists(fonts_dir):
             os.makedirs(fonts_dir)
-            print(f"Создана папка: {fonts_dir}")
-            print("ПОЛОЖИ СЮДА ФАЙЛЫ ШРИФТОВ!")
+            logger2.info(f"Created fonts directory: {fonts_dir}")
 
         font_files = []
         if os.path.exists(fonts_dir):
@@ -113,12 +128,12 @@ class Game:
                     'large': pg.font.Font(font_path, 36),
                     'huge': pg.font.Font(font_path, 48),
                 }
-                print(f"Font loaded: {font_file}")
+                logger2.info(f"Loaded font: {font_file}")
             except Exception as e:
-                print(f"Error loading font {font_file}: {e}")
+                logger1.error(f"Error loading font {font_file}: {e}")
 
         if not fonts:
-            print("No fonts found in assets/fonts. Using default pygame font.")
+            logger1.error("No fonts found in assets/fonts. Using default font.")
             fonts['default'] = {
                 'small': pg.font.Font(None, 16),
                 'medium': pg.font.Font(None, 24),
@@ -147,7 +162,7 @@ class Game:
             with open(settings_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading settings: {e}")
+            logger1.error(f"Error loading settings: {e}")
             return default_settings
 
     def save_settings(self):
@@ -155,8 +170,9 @@ class Game:
         try:
             with open(settings_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2)
+                logger2.info("Settings saved successfully.")
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            logger1.error(f"Error saving settings: {e}")
 
     def create_speed_slider(self):
         self.speed_slider = {
@@ -242,11 +258,11 @@ class Game:
                 pg.mixer.music.load(music_path)
                 pg.mixer.music.set_volume(0.5)
                 pg.mixer.music.play(-1)
-                print("Music started")
+                logger2.info("Music started")
             else:
-                print(f"Music not found: {music_path}")
+                logger1.error(f"Music file not found: {music_path}")
         except pg.error as e:
-            print(f"Error loading music: {e}")
+            logger1.error(f"Error loading music: {e}")
 
     def load_and_play_game_music(self):
         if pg.mixer.music.get_busy():
@@ -258,16 +274,16 @@ class Game:
                 pg.mixer.music.load(music_path)
                 pg.mixer.music.set_volume(0.4)
                 pg.mixer.music.play(-1)
-                print("Game music started")
+                logger2.info("Game music started")
             else:
-                print(f"Game music file not found: {music_path}")
+                logger1.error(f"Game music file not found: {music_path}")
         except pg.error as e:
-            print(f"Error loading game music: {e}")
+            logger1.error(f"Error loading game music: {e}")
 
     def stop_music(self):
         if pg.mixer.music.get_busy():
             pg.mixer.music.stop()
-            print("Music stopped")
+            logger2.info("Music stopped")
     # ------------------------------------------------
 
     def handle_menu_events(self, event):
@@ -364,7 +380,7 @@ class Game:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.running = False
-
+                
             if self.state == "menu":
                 self.handle_menu_events(event)
             elif self.state == "options":
@@ -554,6 +570,7 @@ class Game:
             if self.state == "game":
                 self.update_game()
             self.draw()
+        logger2.info("Game exited")
         pg.quit()
         sys.exit()
 
