@@ -37,8 +37,11 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
-PURPLE = (128, 0, 128)
-ORANGE = (255, 165, 0)
+PURPLE = (128, 0, 128)  
+GOLD = (218, 165, 32)
+SOFTGREEN = (144, 238, 144)
+HONEY = (235, 206, 135)
+
 
 class Button:
 
@@ -76,6 +79,7 @@ class Button:
                 and self.rect.collidepoint(event.pos)
         )
 
+
 class Game:
 
     def __init__(self):
@@ -102,7 +106,7 @@ class Game:
         self.create_volume_slider()
         self.create_menu_buttons()
 
-        # --- ДОБАВЛЕНО: загрузка фонового изображения для меню ---
+        # --- Фоновое изображение меню ---
         self.menu_bg = None
         bg_path = os.path.join('assets', 'images', 'menu_background.jpg')
         try:
@@ -114,7 +118,6 @@ class Game:
                 logger1.error(f"Background image not found: {bg_path}")
         except Exception as e:
             logger1.error(f"Error loading background image: {e}")
-        # ---------------------------------------------------------
 
         self.load_and_play_music()
 
@@ -166,7 +169,7 @@ class Game:
 
     def load_settings(self):
         settings_path = "config/settings.json"
-        default_settings = {"player_speed": 2, "volume": 0.5}
+        default_settings = {"player_speed": 5, "volume": 0.5}
 
         try:
             os.makedirs("config", exist_ok=True)
@@ -199,7 +202,7 @@ class Game:
             "dragging": False
         }
         self.update_slider_handle()
-        
+
     def create_volume_slider(self):
         self.volume_slider = {
             "rect": pg.Rect(WINDOW_WIDTH // 2 - 150, 350, 300, 10),
@@ -220,7 +223,7 @@ class Game:
         handle_x = int(slider["rect"].x + (slider["rect"].width * pos_ratio) - (slider["handle_rect"].width // 2))
         slider["handle_rect"].x = handle_x
         slider["handle_rect"].centery = int(slider["rect"].centery)
-        
+
     def update_volume_slider_handle(self):
         slider = self.volume_slider
         value_range = slider["max_value"] - slider["min_value"]
@@ -240,9 +243,9 @@ class Game:
 
         self.menu_buttons = {
             "new_game": Button(start_x, start_y, button_width, button_height,
-                               "Новая игра", GREEN, DARK_GRAY, GRAY),
+                               "Новая игра", SOFTGREEN, DARK_GRAY, GRAY),
             "continue": Button(start_x, start_y + spacing, button_width, button_height,
-                               "Продолжить", WHITE, DARK_GRAY, GRAY),
+                               "Продолжить", HONEY, DARK_GRAY, GRAY),
             "options": Button(start_x, start_y + spacing * 2, button_width, button_height,
                               "Настройки", BLUE, DARK_GRAY, GRAY),
             "exit": Button(start_x, start_y + spacing * 3, button_width, button_height,
@@ -362,7 +365,7 @@ class Game:
         self.player_speed = slider["value"]
         self.settings["player_speed"] = slider["value"]
         self.update_slider_handle()
-        
+
     def update_volume_slider_value(self, mouse_x):
         slider = self.volume_slider
         mouse_x = max(slider["rect"].left, min(mouse_x, slider["rect"].right))
@@ -395,7 +398,7 @@ class Game:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.running = False
-                
+
             if self.state == "menu":
                 self.handle_menu_events(event)
             elif self.state == "options":
@@ -407,17 +410,19 @@ class Game:
         keys = pg.key.get_pressed()
         moved = False
 
+        actual_speed = self.player_speed * 0.25
+
         if keys[pg.K_LEFT] or keys[pg.K_a]:
-            self.player_x -= self.player_speed
+            self.player_x -= actual_speed
             moved = True
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
-            self.player_x += self.player_speed
+            self.player_x += actual_speed
             moved = True
         if keys[pg.K_UP] or keys[pg.K_w]:
-            self.player_y -= self.player_speed
+            self.player_y -= actual_speed
             moved = True
         if keys[pg.K_DOWN] or keys[pg.K_s]:
-            self.player_y += self.player_speed
+            self.player_y += actual_speed
             moved = True
 
         if moved:
@@ -428,33 +433,26 @@ class Game:
             dy = self.target_y - self.player_y
             distance = (dx ** 2 + dy ** 2) ** 0.5
 
-            if distance < self.player_speed:
+            if distance < actual_speed:
                 self.player_x = self.target_x
                 self.player_y = self.target_y
                 self.moving_to_target = False
             else:
-                self.player_x += (dx / distance) * self.player_speed
-                self.player_y += (dy / distance) * self.player_speed
+                self.player_x += (dx / distance) * actual_speed
+                self.player_y += (dy / distance) * actual_speed
 
         self.player_x = max(10, min(self.player_x, WINDOW_WIDTH - 10))
         self.player_y = max(10, min(self.player_y, WINDOW_HEIGHT - 10))
 
     def draw_menu(self):
-        # --- ДОБАВЛЕНО: отрисовка фонового изображения ---
         if self.menu_bg:
             self.screen.blit(self.menu_bg, (0, 0))
         else:
             self.screen.fill(BLACK)
-        # ------------------------------------------------
 
-        title1 = self.title_font.render("PythonRL", True, GREEN)
-        title2 = self.title_font.render("Echoes of the Forgotten Throne", True, PURPLE)
-
-        title1_rect = title1.get_rect(center=(WINDOW_WIDTH // 2, 100))
-        title2_rect = title2.get_rect(center=(WINDOW_WIDTH // 2, 160))
-
-        self.screen.blit(title1, title1_rect)
-        self.screen.blit(title2, title2_rect)
+        title = self.title_font.render("Echoes of the Forgotten Throne", True, GOLD)
+        title_rect = title.get_rect(center=(WINDOW_WIDTH // 2, 130))
+        self.screen.blit(title, title_rect)
 
         for button in self.menu_buttons.values():
             button.draw(self.screen, self.menu_font)
@@ -472,7 +470,7 @@ class Game:
         speed_label = self.menu_font.render("Скорость игрока:", True, WHITE)
         label_rect = speed_label.get_rect(center=(WINDOW_WIDTH // 2, 200))
         self.screen.blit(speed_label, label_rect)
-        
+
         volume_label = self.menu_font.render("Громкость музыки:", True, WHITE)
         volume_label_rect = volume_label.get_rect(center=(WINDOW_WIDTH // 2, 300))
         self.screen.blit(volume_label, volume_label_rect)
@@ -486,7 +484,7 @@ class Game:
             center=(WINDOW_WIDTH // 2 + 200, 200)
         )
         self.screen.blit(speed_value, value_rect)
-        
+
         volume_value = self.menu_font.render(
             str(self.volume_slider["value"]),
             True,
@@ -527,10 +525,10 @@ class Game:
 
         self.screen.blit(min_text, min_rect)
         self.screen.blit(max_text, max_rect)
-        
+
         pg.draw.rect(self.screen, GRAY, self.volume_slider["rect"])
         pg.draw.rect(self.screen, WHITE, self.volume_slider["rect"], 2)
-        
+
         volume_filled_width = (self.volume_slider["value"] - self.volume_slider["min_value"]) / (self.volume_slider["max_value"] - self.volume_slider["min_value"])
         volume_filled_rect = pg.Rect(
             self.volume_slider["rect"].x,
@@ -539,7 +537,7 @@ class Game:
             self.volume_slider["rect"].height
         )
         pg.draw.rect(self.screen, BLUE, volume_filled_rect)
-        
+
         volume_handle_color = YELLOW if self.volume_slider["dragging"] else WHITE
         pg.draw.rect(self.screen, volume_handle_color, self.volume_slider["handle_rect"])
         pg.draw.rect(self.screen, DARK_GRAY, self.volume_slider["handle_rect"], 2)
