@@ -486,7 +486,7 @@ class Game:
         self.screen.blit(speed_value, value_rect)
 
         volume_value = self.menu_font.render(
-            str(self.volume_slider["value"]),
+            str(int(self.volume_slider["value"]*100)) + "%",
             True,
             YELLOW
         )
@@ -541,6 +541,19 @@ class Game:
         volume_handle_color = YELLOW if self.volume_slider["dragging"] else WHITE
         pg.draw.rect(self.screen, volume_handle_color, self.volume_slider["handle_rect"])
         pg.draw.rect(self.screen, DARK_GRAY, self.volume_slider["handle_rect"], 2)
+        
+        volume_min_text = self.small_font.render(str(self.volume_slider["min_value"]), True, GRAY)
+        volume_max_text = self.small_font.render(str(self.volume_slider["max_value"]*100), True, GRAY)
+
+        volume_min_rect = volume_min_text.get_rect(
+            midright=(self.volume_slider["rect"].left - 10, self.volume_slider["rect"].centery)
+        )
+        volume_max_rect = volume_max_text.get_rect(
+            midleft=(self.volume_slider["rect"].right + 10, self.volume_slider["rect"].centery)
+        )
+
+        self.screen.blit(volume_min_text, volume_min_rect)
+        self.screen.blit(volume_max_text, volume_max_rect)
 
         self.back_button.draw(self.screen, self.menu_font)
 

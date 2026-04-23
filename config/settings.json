@@ -1,8 +1,4 @@
 {
-  "player_speed": 1,
-<<<<<<< HEAD
-  "volume": 0.0
-=======
-  "volume": 0.93
->>>>>>> 57b61d0debac9b355c64d6f7ea28fbcb8021def4
+  "player_speed": 6,
+  "volume": 0.29
 }
