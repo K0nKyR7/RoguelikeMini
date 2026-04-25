@@ -4,7 +4,25 @@ import json
 import os
 import logging
 
-# Настройка логирования
+# Ensure logs dir exists and clean old logs
+os.makedirs("logs", exist_ok=True)
+
+
+def clean_log(file_path, max_lines=100, remove_lines=50):
+    try:
+        if not os.path.exists(file_path):
+            return
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        if len(lines) > max_lines:
+            new_lines = lines[remove_lines:]
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.writelines(new_lines)
+    except Exception as e:
+        print(f"Failed to clean log {file_path}: {e}", file=sys.stderr)
+
+clean_log("logs/game_errors.log")
+clean_log("logs/game_info.log")
 handler1 = logging.FileHandler("logs/game_errors.log", encoding='utf-8')
 handler2 = logging.FileHandler("logs/game_info.log", encoding='utf-8')
 
@@ -78,7 +96,6 @@ class Button:
                 and event.button == 1
                 and self.rect.collidepoint(event.pos)
         )
-
 
 class Game:
 
